@@ -38,7 +38,7 @@ import socket
 import sys
 from pathlib import Path
 
-DEFAULT_SOCKET_PATH = "/run/pi-mirror-daemon.sock"
+DEFAULT_SOCKET_PATH = "/run/pi-mirror/pi-mirror-daemon.sock"
 
 
 # ---------------------------------------------------------------------------

@@ -137,7 +137,7 @@ class MirrorConfig:
     poll_interval: float = 0.5  # seconds between PIR sensor reads
     browser_cmd: list[str] = field(default_factory=lambda: list(BROWSER_CMD_DEFAULT))
     log_file: str = "/var/log/pi-mirror-daemon.log"
-    socket_path: str = "/run/pi-mirror-daemon.sock"
+    socket_path: str = "/run/pi-mirror/pi-mirror-daemon.sock"
     admin_users: list[str] = field(default_factory=list)
 
 

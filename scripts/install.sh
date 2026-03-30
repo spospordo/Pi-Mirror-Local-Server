@@ -58,8 +58,17 @@ install_python_deps() {
 
 create_directories() {
     install -d -m 755 "${INSTALL_DIR}"
-    install -d -m 750 "${CONFIG_DIR}"
+    install -d -m 750 -o root -g "${SERVICE_USER}" "${CONFIG_DIR}"
     info "Directories ready: ${INSTALL_DIR}  ${CONFIG_DIR}"
+}
+
+setup_tmpfiles() {
+    echo "d /run/pi-mirror 0750 ${SERVICE_USER} ${SERVICE_USER} -" \
+        > /etc/tmpfiles.d/pi-mirror.conf
+    # Create the directory for the current boot if it doesn't already exist
+    systemd-tmpfiles --create /etc/tmpfiles.d/pi-mirror.conf 2>/dev/null || \
+        install -d -m 750 -o "${SERVICE_USER}" -g "${SERVICE_USER}" /run/pi-mirror
+    info "Runtime directory /run/pi-mirror configured."
 }
 
 copy_files() {
@@ -144,6 +153,7 @@ require_root
 create_service_user
 install_python_deps
 create_directories
+setup_tmpfiles
 copy_files
 setup_log_file
 install_service
