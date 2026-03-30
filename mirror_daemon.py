@@ -215,10 +215,32 @@ class MirrorDaemon:
     def _serve_socket(self) -> None:
         sock_path = self._cfg.socket_path
         # Remove stale socket
-        Path(sock_path).unlink(missing_ok=True)
+        try:
+            Path(sock_path).unlink(missing_ok=True)
+        except OSError as exc:
+            log.warning("Could not remove stale socket %s: %s", sock_path, exc)
+
+        # Ensure parent directory exists
+        sock_dir = Path(sock_path).parent
+        if not sock_dir.exists():
+            try:
+                sock_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                log.error("Cannot create socket directory %s: %s", sock_dir, exc)
+                raise
 
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self._sock.bind(sock_path)
+        try:
+            self._sock.bind(sock_path)
+        except PermissionError as exc:
+            log.error(
+                "Permission denied binding socket at %s. "
+                "Ensure the directory is writable by the '%s' user. "
+                "Check socket_path in mirror.conf and RuntimeDirectory in the systemd unit.",
+                sock_path,
+                os.getenv("USER", "pi-mirror"),
+            )
+            raise
         # Permissions: owner read/write only (daemon runs as dedicated user)
         os.chmod(sock_path, 0o660)
         self._sock.listen(5)

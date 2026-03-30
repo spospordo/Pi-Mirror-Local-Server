@@ -2,6 +2,8 @@
 Description=Pi Mirror Remote Management Daemon
 Documentation=https://github.com/spospordo/Pi-Mirror-Local-Server
 After=network.target
+StartLimitIntervalSec=600
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -14,19 +16,23 @@ Group=pi-mirror
 Environment="MIRROR_CONF=/etc/pi-mirror/mirror.conf"
 
 WorkingDirectory=/opt/pi-mirror
+ExecStartPre=+/bin/mkdir -p /run/pi-mirror
+ExecStartPre=+/bin/chown pi-mirror:pi-mirror /run/pi-mirror
 ExecStart=/usr/bin/python3 /opt/pi-mirror/mirror_daemon.py --config ${MIRROR_CONF}
 
 # Restart policy: restart on failure after 5 s, up to 5 times in 10 min
 Restart=on-failure
 RestartSec=5
-StartLimitIntervalSec=600
-StartLimitBurst=5
+
+# systemd creates /run/pi-mirror owned by the service user
+RuntimeDirectory=pi-mirror
+RuntimeDirectoryMode=0750
 
 # Security hardening
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
-ReadWritePaths=/var/log /run /etc/pi-mirror
+ReadWritePaths=/var/log /run/pi-mirror /etc/pi-mirror
 
 # Allow GPIO access (needed for RPi.GPIO)
 SupplementaryGroups=gpio video
