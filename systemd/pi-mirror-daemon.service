@@ -1,0 +1,38 @@
+[Unit]
+Description=Pi Mirror Remote Management Daemon
+Documentation=https://github.com/spospordo/Pi-Mirror-Local-Server
+After=network.target
+
+[Service]
+Type=simple
+
+# Dedicated service account (created by install.sh)
+User=pi-mirror
+Group=pi-mirror
+
+# Config survives package updates
+Environment="MIRROR_CONF=/etc/pi-mirror/mirror.conf"
+
+WorkingDirectory=/opt/pi-mirror
+ExecStart=/usr/bin/python3 /opt/pi-mirror/mirror_daemon.py --config ${MIRROR_CONF}
+
+# Restart policy: restart on failure after 5 s, up to 5 times in 10 min
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/var/log /run /etc/pi-mirror
+
+# Allow GPIO access (needed for RPi.GPIO)
+SupplementaryGroups=gpio video
+
+# Give sudo access to reboot/shutdown only (see install.sh for sudoers rule)
+# The process must be able to call: sudo reboot / sudo shutdown -h now
+
+[Install]
+WantedBy=multi-user.target
