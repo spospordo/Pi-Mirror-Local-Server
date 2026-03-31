@@ -107,8 +107,9 @@ install_service() {
 setup_sudoers() {
     local sudoers_file="/etc/sudoers.d/pi-mirror"
     cat > "${sudoers_file}" <<EOF
-# Allow pi-mirror service to reboot or shut down without a password
-${SERVICE_USER} ALL=(root) NOPASSWD: /sbin/reboot, /sbin/shutdown
+# Allow pi-mirror service to reboot or shut down without a password,
+# and to kill browser processes owned by any user (for browser restart)
+${SERVICE_USER} ALL=(root) NOPASSWD: /sbin/reboot, /sbin/shutdown, /usr/bin/pkill
 EOF
     chmod 440 "${sudoers_file}"
     info "Sudoers rule written to ${sudoers_file}"

@@ -13,6 +13,7 @@ Hardware defaults (overridable via MirrorConfig):
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import threading
 import time
@@ -105,9 +106,33 @@ def restart_browser(cmd: Optional[list[str]] = None) -> bool:
     browser_cmd = cmd or BROWSER_CMD_DEFAULT
     browser_bin = browser_cmd[0]
 
-    # Kill existing instance (ignore errors if not running)
-    _run(["pkill", "-f", browser_bin])
+    # Use sudo pkill so we can kill browser processes owned by any user
+    # (the browser runs in the X session user's context, not the daemon user's)
+    _run(["sudo", "pkill", "-f", browser_bin])
     time.sleep(1)
+
+    # Set up display environment so Chromium can connect to the X session
+    env = os.environ.copy()
+    env["DISPLAY"] = ":0"
+
+    # Try common XAUTHORITY locations.  The X session is typically run by a
+    # human user whose home directory differs from the daemon's service account.
+    # Add the Pi-local user's home first, then fall back to generic locations.
+    xauth_candidates = [
+        os.path.expanduser("~/.Xauthority"),
+        "/tmp/.Xauthority",
+    ]
+    xauth_found = False
+    for xauth_path in xauth_candidates:
+        if os.path.exists(xauth_path):
+            env["XAUTHORITY"] = xauth_path
+            xauth_found = True
+            break
+    if not xauth_found:
+        log.warning(
+            "No XAUTHORITY file found (tried: %s); Chromium may fail to connect to the X server.",
+            ", ".join(xauth_candidates),
+        )
 
     try:
         subprocess.Popen(
@@ -115,6 +140,7 @@ def restart_browser(cmd: Optional[list[str]] = None) -> bool:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
+            env=env,
         )
         log.info("Browser restarted: %s", " ".join(browser_cmd))
         return True

@@ -29,7 +29,10 @@ RuntimeDirectory=pi-mirror
 RuntimeDirectoryMode=0750
 
 # Security hardening
-NoNewPrivileges=yes
+# NoNewPrivileges must remain 'no' so that sudo can escalate privileges.
+# The daemon needs sudo for: reboot, shutdown, DRM sysfs display control,
+# and pkill (browser restart across user sessions).
+NoNewPrivileges=no
 PrivateTmp=yes
 ProtectSystem=strict
 ReadWritePaths=/var/log /run/pi-mirror /etc/pi-mirror
@@ -37,8 +40,8 @@ ReadWritePaths=/var/log /run/pi-mirror /etc/pi-mirror
 # Allow GPIO access (needed for RPi.GPIO)
 SupplementaryGroups=gpio video
 
-# Give sudo access to reboot/shutdown only (see install.sh for sudoers rule)
-# The process must be able to call: sudo reboot / sudo shutdown -h now
+# Give sudo access to reboot/shutdown/pkill (see install.sh for sudoers rule)
+# The process must be able to call: sudo reboot / sudo shutdown -h now / sudo pkill
 
 [Install]
 WantedBy=multi-user.target
