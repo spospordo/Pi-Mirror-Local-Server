@@ -46,7 +46,7 @@ def _run(cmd: list[str]) -> tuple[int, str, str]:
 
 def hdmi_on() -> bool:
     """Turn the HDMI display on.  Returns True on success."""
-    rc, _, err = _run(["vcgencmd", "display_power", "1"])
+    rc, _, err = _run(["sudo", "sh", "-c", f"echo on > {HDMI_STATUS_FILE}"])
     if rc == 0:
         log.info("HDMI display turned ON")
         return True
@@ -56,7 +56,7 @@ def hdmi_on() -> bool:
 
 def hdmi_off() -> bool:
     """Turn the HDMI display off.  Returns True on success."""
-    rc, _, err = _run(["vcgencmd", "display_power", "0"])
+    rc, _, err = _run(["sudo", "sh", "-c", f"echo off > {HDMI_STATUS_FILE}"])
     if rc == 0:
         log.info("HDMI display turned OFF")
         return True

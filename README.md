@@ -115,6 +115,7 @@ It performs the following steps automatically:
 | Prepares log file | Creates `/var/log/pi-mirror-daemon.log` owned by `pi-mirror` |
 | Installs systemd unit | Copies to `/etc/systemd/system/` and runs `systemctl enable` |
 | Adds sudoers rule | Allows the `pi-mirror` user to run `sudo reboot` / `sudo shutdown` without a password |
+| Adds display sudoers rule | Allows the `pi-mirror` user to write to the DRM sysfs status file for HDMI display control (required on Pi 2 with FKMS driver) |
 | Prints SSH key guide | Shows the exact `authorized_keys` line format for remote control |
 
 **Expected output (abbreviated):**
@@ -128,6 +129,7 @@ It performs the following steps automatically:
 [INFO]  Log file prepared: /var/log/pi-mirror-daemon.log
 [INFO]  Systemd unit installed and enabled.
 [INFO]  Sudoers rule written to /etc/sudoers.d/pi-mirror
+[INFO]  Display sudoers rule written to /etc/sudoers.d/pi-mirror-display
 
 ---- SSH Authorized-Keys Setup (manual step) --------------------------------
 …
@@ -560,6 +562,40 @@ sudo journalctl -u pi-mirror-daemon -n 50 --no-pager
 - Check the daemon log for GPIO errors: `sudo tail -50 /var/log/pi-mirror-daemon.log`
 - If `RPi.GPIO` is unavailable the daemon runs in software-only mode (display
   stays on) – install it with `sudo pip3 install RPi.GPIO` and restart the service
+
+### Display on/off commands have no effect (Pi 2 with FKMS overlay driver)
+
+On a Raspberry Pi 2 using the FKMS overlay driver (`dtoverlay=vc4-fkms-v3d`),
+`vcgencmd display_power` may report success but **does not actually control the
+display**.  The daemon instead writes directly to the DRM sysfs status file:
+
+```
+/sys/class/drm/card0-HDMI-A-1/status
+```
+
+This requires root privileges.  The install script automatically creates the
+sudoers rule at `/etc/sudoers.d/pi-mirror-display`:
+
+```
+pi-mirror ALL=(root) NOPASSWD: /bin/sh -c echo * > /sys/class/drm/card0-HDMI-A-1/status
+```
+
+If the rule is missing (e.g. on a pre-existing installation), re-run the install
+script or create it manually:
+
+```bash
+sudo tee /etc/sudoers.d/pi-mirror-display <<'EOF'
+pi-mirror ALL=(root) NOPASSWD: /bin/sh -c echo * > /sys/class/drm/card0-HDMI-A-1/status
+EOF
+sudo chmod 440 /etc/sudoers.d/pi-mirror-display
+```
+
+Verify it works:
+
+```bash
+sudo -u pi-mirror sudo sh -c 'echo off > /sys/class/drm/card0-HDMI-A-1/status'
+sudo -u pi-mirror sudo sh -c 'echo on > /sys/class/drm/card0-HDMI-A-1/status'
+```
 
 ### `update_config` changes don't survive a service restart
 
