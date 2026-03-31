@@ -112,6 +112,14 @@ ${SERVICE_USER} ALL=(root) NOPASSWD: /sbin/reboot, /sbin/shutdown
 EOF
     chmod 440 "${sudoers_file}"
     info "Sudoers rule written to ${sudoers_file}"
+
+    local display_sudoers_file="/etc/sudoers.d/pi-mirror-display"
+    cat > "${display_sudoers_file}" <<EOF
+# Allow pi-mirror to control the HDMI display via DRM sysfs (required on Pi 2 with FKMS driver)
+${SERVICE_USER} ALL=(root) NOPASSWD: /bin/sh -c echo * > /sys/class/drm/card0-HDMI-A-1/status
+EOF
+    chmod 440 "${display_sudoers_file}"
+    info "Display sudoers rule written to ${display_sudoers_file}"
 }
 
 setup_authorized_keys() {

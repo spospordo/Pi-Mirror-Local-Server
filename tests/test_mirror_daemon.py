@@ -43,6 +43,10 @@ class TestHdmiHelpers(unittest.TestCase):
         result = pir_display.hdmi_on()
         self.assertTrue(result)
         mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[:3], ["sudo", "sh", "-c"])
+        self.assertIn("echo on", args[3])
+        self.assertIn(pir_display.HDMI_STATUS_FILE, args[3])
 
     @patch("pir_display.subprocess.run")
     def test_hdmi_off_success(self, mock_run: MagicMock) -> None:
@@ -51,6 +55,11 @@ class TestHdmiHelpers(unittest.TestCase):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         result = pir_display.hdmi_off()
         self.assertTrue(result)
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[:3], ["sudo", "sh", "-c"])
+        self.assertIn("echo off", args[3])
+        self.assertIn(pir_display.HDMI_STATUS_FILE, args[3])
 
     @patch("pir_display.subprocess.run")
     def test_hdmi_on_failure(self, mock_run: MagicMock) -> None:
