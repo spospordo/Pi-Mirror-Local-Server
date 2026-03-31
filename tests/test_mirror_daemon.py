@@ -155,6 +155,86 @@ class TestRestartBrowser(unittest.TestCase):
         result = pir_display.restart_browser()
         self.assertFalse(result)
 
+    @patch("pir_display.subprocess.Popen")
+    @patch("pir_display._run")
+    @patch("pir_display.time.sleep")
+    def test_pkill_uses_sudo(
+        self,
+        mock_sleep: MagicMock,
+        mock_run: MagicMock,
+        mock_popen: MagicMock,
+    ) -> None:
+        """pkill must be invoked via sudo so it can kill browser processes
+        owned by any user (the X session user differs from the daemon user)."""
+        import pir_display
+
+        mock_run.return_value = (0, "", "")
+        pir_display.restart_browser()
+        args, _ = mock_run.call_args
+        cmd = args[0]
+        self.assertEqual(cmd[0], "sudo")
+        self.assertIn("pkill", cmd)
+
+    @patch("pir_display.subprocess.Popen")
+    @patch("pir_display._run")
+    @patch("pir_display.time.sleep")
+    def test_popen_sets_display_env(
+        self,
+        mock_sleep: MagicMock,
+        mock_run: MagicMock,
+        mock_popen: MagicMock,
+    ) -> None:
+        """Popen must receive DISPLAY=:0 so Chromium can connect to the X server."""
+        import pir_display
+
+        mock_run.return_value = (0, "", "")
+        pir_display.restart_browser()
+        _, kwargs = mock_popen.call_args
+        env = kwargs.get("env", {})
+        self.assertEqual(env.get("DISPLAY"), ":0")
+
+    @patch("pir_display.subprocess.Popen")
+    @patch("pir_display._run")
+    @patch("pir_display.time.sleep")
+    @patch("pir_display.os.path.exists")
+    def test_popen_sets_xauthority_when_file_exists(
+        self,
+        mock_exists: MagicMock,
+        mock_sleep: MagicMock,
+        mock_run: MagicMock,
+        mock_popen: MagicMock,
+    ) -> None:
+        """XAUTHORITY must be set in the Popen env when a valid file is found."""
+        import pir_display
+
+        mock_run.return_value = (0, "", "")
+        # Simulate the first candidate existing
+        mock_exists.side_effect = lambda p: True
+        pir_display.restart_browser()
+        _, kwargs = mock_popen.call_args
+        env = kwargs.get("env", {})
+        self.assertIn("XAUTHORITY", env)
+
+    @patch("pir_display.subprocess.Popen")
+    @patch("pir_display._run")
+    @patch("pir_display.time.sleep")
+    @patch("pir_display.os.path.exists", return_value=False)
+    def test_popen_no_xauthority_when_no_file(
+        self,
+        mock_exists: MagicMock,
+        mock_sleep: MagicMock,
+        mock_run: MagicMock,
+        mock_popen: MagicMock,
+    ) -> None:
+        """When no XAUTHORITY file is found, XAUTHORITY should not be set in env."""
+        import pir_display
+
+        mock_run.return_value = (0, "", "")
+        pir_display.restart_browser()
+        _, kwargs = mock_popen.call_args
+        env = kwargs.get("env", {})
+        self.assertNotIn("XAUTHORITY", env)
+
 
 class TestMirrorConfig(unittest.TestCase):
     def test_default_values(self) -> None:
